@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ປ້ຳນ້ຳມັນ ຫຼວງພະບາງ</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@300;400;500;600;700&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F7F5F0;
+  --surface:#FFFFFF;
+  --surface2:#F2EFE8;
+  --border:#E4DDD0;
+  --border2:#C8BFB0;
+  --text:#1A1612;
+  --muted:#7A7068;
+  --hint:#ADA49A;
+  --green:#1A7A3C;
+  --green-bg:#E8F5ED;
+  --green-border:#A8D9B8;
+  --red:#B53030;
+  --red-bg:#FAEAEA;
+  --red-border:#F0B8B8;
+  --amber:#8A6200;
+  --amber-bg:#FFF6DD;
+  --blue:#1A5FA8;
+  --blue-bg:#EAF2FC;
+  --accent:#C4902A;
+  --font:'Noto Sans Lao','Sarabun',sans-serif;
+  --shadow: 0 1px 4px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+
+/* NAV */
+nav{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:0 1rem;
+  display:flex;align-items:center;gap:12px;
+  height:56px;flex-shrink:0;
+  box-shadow:var(--shadow-sm);
+  z-index:200;
+  position:relative;
+}
+.nav-logo{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.nav-icon{
+  width:34px;height:34px;background:var(--accent);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:17px;line-height:1;
+}
+.nav-title{font-size:15px;font-weight:600;color:var(--text);white-space:nowrap}
+.nav-sub{font-size:11px;color:var(--muted)}
+.nav-spacer{flex:1}
+.live-pill{
+  display:flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:500;color:var(--green);
+  background:var(--green-bg);border:1px solid var(--green-border);
+  padding:3px 10px;border-radius:100px;white-space:nowrap;
+}
+.dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 1.8s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+#clock{
+  font-size:12px;font-weight:500;color:var(--accent);
+  background:var(--amber-bg);border:1px solid #E8D090;
+  padding:3px 10px;border-radius:100px;white-space:nowrap;letter-spacing:.5px;
+}
+
+/* TABS */
+.tabs{
+  display:flex;background:var(--surface);border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.tab{
+  flex:1;padding:10px;text-align:center;font-size:13px;font-weight:500;
+  color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;
+  transition:all .15s;user-select:none;
+}
+.tab.active{color:var(--text);border-bottom-color:var(--accent)}
+.tab:hover{background:var(--surface2)}
+
+/* STATS ROW */
+.stats{
+  display:flex;background:var(--surface);border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.stat{
+  flex:1;text-align:center;padding:10px 4px;
+  border-right:1px solid var(--border);
+}
+.stat:last-child{border-right:none}
+.stat-n{font-size:22px;font-weight:700;line-height:1}
+.stat-n.g{color:var(--green)}
+.stat-n.r{color:var(--red)}
+.stat-n.a{color:var(--amber)}
+.stat-l{font-size:10px;color:var(--muted);margin-top:1px}
+
+/* FILTER */
+.filter-row{
+  display:flex;gap:6px;padding:8px 12px;
+  background:var(--bg);border-bottom:1px solid var(--border);
+  flex-shrink:0;overflow-x:auto;
+}
+.filter-row::-webkit-scrollbar{display:none}
+.fbtn{
+  font-family:var(--font);font-size:12px;font-weight:500;
+  padding:5px 14px;border-radius:100px;
+  border:1px solid var(--border2);
+  background:var(--surface);color:var(--muted);
+  cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;
+}
+.fbtn:hover{border-color:var(--border2);color:var(--text)}
+.fbtn.fa{background:var(--surface);color:var(--text);border-color:var(--border2)}
+.fbtn.fo{background:var(--green-bg);color:var(--green);border-color:var(--green-border)}
+.fbtn.fc{background:var(--red-bg);color:var(--red);border-color:var(--red-border)}
+
+/* MAIN BODY */
+.main{flex:1;display:flex;overflow:hidden;min-height:0}
+
+/* MAP PANEL */
+#map-view{flex:1;position:relative;display:flex;flex-direction:column;min-height:0}
+#map{flex:1;min-height:0}
+
+/* LIST PANEL */
+#list-view{
+  flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;
+}
+#list-view::-webkit-scrollbar{width:4px}
+#list-view::-webkit-scrollbar-track{background:transparent}
+#list-view::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* CARDS */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:var(--shadow-sm);
+  transition:box-shadow .15s, transform .15s;
+}
+.card:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+.card.open{border-left:3px solid var(--green)}
+.card.closed{border-left:3px solid var(--red)}
+.card-head{display:flex;align-items:flex-start;gap:10px;padding:12px 12px 8px}
+.c-icon{
+  width:40px;height:40px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;
+}
+.c-icon.o{background:var(--green-bg)}
+.c-icon.c{background:var(--red-bg)}
+.c-info{flex:1;min-width:0}
+.c-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.c-addr{font-size:11px;color:var(--muted)}
+.c-pill{
+  font-size:10px;font-weight:600;padding:3px 8px;border-radius:100px;flex-shrink:0;
+}
+.c-pill.o{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.c-pill.c{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+.c-body{padding:0 12px 10px;display:flex;flex-wrap:wrap;gap:6px}
+.c-tag{
+  font-size:11px;color:var(--muted);
+  background:var(--surface2);padding:3px 8px;border-radius:6px;
+  display:flex;align-items:center;gap:4px;
+}
+.c-tag span{font-size:12px}
+.c-note{
+  margin:0 12px 10px;padding:7px 10px;
+  background:var(--surface2);border-radius:8px;
+  font-size:11px;color:var(--muted);line-height:1.5;
+}
+.c-foot{
+  padding:8px 12px;border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;
+}
+.stars{color:#C4902A;font-size:12px}
+.rating-txt{font-size:11px;color:var(--muted)}
+.map-btn{
+  font-size:11px;font-weight:600;color:var(--blue);
+  background:var(--blue-bg);border:1px solid #9EC8F5;
+  padding:4px 12px;border-radius:100px;
+  text-decoration:none;margin-left:auto;white-space:nowrap;
+  transition:background .15s;
+}
+.map-btn:hover{background:#D0E7FA}
+
+/* MAP popup custom */
+.lpopup{font-family:var(--font);min-width:180px}
+.lpopup-name{font-size:13px;font-weight:600;margin-bottom:4px;color:#1A1612}
+.lpopup-addr{font-size:11px;color:#7A7068;margin-bottom:6px}
+.lpopup-status{font-size:11px;font-weight:600;padding:2px 8px;border-radius:100px;display:inline-block;margin-bottom:6px}
+.lpopup-status.o{background:#E8F5ED;color:#1A7A3C}
+.lpopup-status.c{background:#FAEAEA;color:#B53030}
+.lpopup-hours{font-size:11px;color:#7A7068}
+.lpopup-link{display:block;margin-top:8px;font-size:11px;color:#1A5FA8;text-decoration:none;font-weight:500}
+
+/* EMPTY */
+.empty-msg{text-align:center;color:var(--hint);font-size:13px;padding:2rem;width:100%}
+
+/* MOBILE RESPONSIVE */
+@media(max-width:600px){
+  nav{padding:0 .75rem;gap:8px}
+  .nav-sub{display:none}
+  #clock{font-size:11px;padding:2px 8px}
+  .stat-n{font-size:18px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <div class="nav-icon">⛽</div>
+    <div>
+      <div class="nav-title">ປ້ຳນ້ຳມັນ ຫຼວງພະບາງ</div>
+      <div class="nav-sub">Luang Prabang Fuel Stations</div>
+    </div>
+  </div>
+  <div class="nav-spacer"></div>
+  <div class="live-pill"><div class="dot"></div>Live</div>
+  <div id="clock">--:--</div>
+</nav>
+
+<div class="stats">
+  <div class="stat"><div class="stat-n g" id="s-open">-</div><div class="stat-l">ເປີດຢູ່</div></div>
+  <div class="stat"><div class="stat-n r" id="s-closed">-</div><div class="stat-l">ປິດແລ້ວ</div></div>
+  <div class="stat"><div class="stat-n a" id="s-total">-</div><div class="stat-l">ທັງໝົດ</div></div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" id="tab-map" onclick="switchTab('map')">🗺 ແຜນທີ່</div>
+  <div class="tab" id="tab-list" onclick="switchTab('list')">☰ ລາຍການ</div>
+</div>
+
+<div class="filter-row">
+  <button class="fbtn fa" id="f-all"    onclick="setFilter('all')">ທັງໝົດ</button>
+  <button class="fbtn"    id="f-open"   onclick="setFilter('open')">✓ ເປີດຢູ່</button>
+  <button class="fbtn"    id="f-closed" onclick="setFilter('closed')">✕ ປິດແລ້ວ</button>
+</div>
+
+<div class="main">
+  <div id="map-view">
+    <div id="map"></div>
+  </div>
+  <div id="list-view" style="display:none"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const STATIONS = [
+  {
+    id:1, name:"PTT Station Luangprabang",
+    icon:"🔴", brand:"PTT",
+    lat:19.9074323, lng:102.1672183,
+    openMin:6*60, closeMin:21*60+45,
+    hours:"06:00 – 21:45",
+    rating:4.1, ratingCount:68,
+    addr:"ຖ.13 ເໜືອ (ໃກ້ສະໜາມບິນ)",
+    tags:["Octane 95","Amazon Coffee","ຈ່າຍເງິນສົດ"],
+    note:"ເປີດດົນທີ່ສຸດ · ຫ້ອງນ້ຳ · ຮ້ານກາເຟ · ທີ່ຈອດລົດ",
+    closedSun:false
+  },
+  {
+    id:2, name:"Visoun Gas Station",
+    icon:"🟤", brand:"Visoun",
+    lat:19.8875176, lng:102.1393347,
+    openMin:6*60, closeMin:19*60+30,
+    hours:"06:00 – 19:30",
+    rating:3.9, ratingCount:40,
+    addr:"ກາງເມືອງ ຫຼວງພະບາງ",
+    tags:["ຈ່າຍໂທລະສັບໄດ້","ເຊົ່າລົດຈັກ"],
+    note:"ສະດວກໃຈກາງເມືອງ · ໃຊ້ app ຈ່າຍໄດ້",
+    closedSun:false
+  },
+  {
+    id:3, name:"ສົມໄຊ ແສງເພັດ (ບ້ານຫາດຮ້ຽນ)",
+    icon:"🟡", brand:"ທ້ອງຖິ່ນ",
+    lat:19.904937, lng:102.175177,
+    openMin:6*60, closeMin:20*60,
+    hours:"06:00 – 20:00",
+    rating:5.0, ratingCount:3,
+    addr:"ບ້ານຫາດຮ້ຽນ (ໃກ້ສະໜາມບິນ)",
+    tags:["ໃກ້ສະໜາມບິນ"],
+    note:"ຄຸນນະພາບດີ · ຫາດຮ້ຽນ",
+    closedSun:false
+  },
+  {
+    id:4, name:"ສາຍເໜືອ (Saynhua)",
+    icon:"🟢", brand:"ທ້ອງຖິ່ນ",
+    lat:19.9001113, lng:102.1558893,
+    openMin:6*60, closeMin:21*60,
+    hours:"06:00 – 21:00",
+    rating:3.6, ratingCount:16,
+    addr:"117/7 ໜອງຊາຍ ຫຼວງພະບາງ",
+    tags:["ເຊິ່ງໃຈກາງ"],
+    note:"⚠ ລູກຄ້າບາງຄົນລາຍງານວ່າຈິງໆປິດ 18:00",
+    closedSun:false
+  },
+  {
+    id:5, name:"PetroVietnam PV Oil",
+    icon:"🔵", brand:"PV Oil",
+    lat:19.877341599999998, lng:102.1347038,
+    openMin:6*60+30, closeMin:18*60,
+    hours:"06:30 – 18:00",
+    rating:3.7, ratingCount:40,
+    addr:"ຝັ່ງໃຕ້ ຫຼວງພະບາງ",
+    tags:["ດີໂຊ","ລ້າງລົດ"],
+    note:"ບໍລິການລ້າງລົດ · ດີໂຊ · ຝັ່ງໃຕ້",
+    closedSun:false
+  },
+  {
+    id:6, name:"ແສງເພັດ Sengphet",
+    icon:"🟠", brand:"ທ້ອງຖິ່ນ",
+    lat:19.8940263, lng:102.1500099,
+    openMin:6*60+30, closeMin:9*60+30,
+    hours:"⚠ 06:30 – 09:30 ເທົ່ານັ້ນ",
+    rating:3.4, ratingCount:5,
+    addr:"ຖ.13 ຫຼວງພະບາງ",
+    tags:["ເຊົ້າເທົ່ານັ້ນ"],
+    note:"⚠ ເປີດສັ້ນຫຼາຍ — ພຽງ 3 ຊົ່ວໂມງ/ວັນ",
+    closedSun:false
+  },
+  {
+    id:7, name:"3ຊ່າງ Garage & Fuel",
+    icon:"⚫", brand:"ທ້ອງຖິ່ນ",
+    lat:19.8790038, lng:102.1402325,
+    openMin:8*60, closeMin:18*60,
+    hours:"08:00 – 18:00 (ອາທິດ: ປິດ)",
+    rating:3.0, ratingCount:7,
+    addr:"ໃກ້ຫາດໄຊ",
+    tags:["ໂຮງອູ່","ວັນອາທິດປິດ"],
+    note:"ວັນອາທິດ ປິດ · ມີໂຮງອູ່ສ້ອມລົດ",
+    closedSun:true
+  },
+  {
+    id:8, name:"Lao State Fuel Co. (LSFC)",
+    icon:"🏛", brand:"LSFC",
+    lat:19.8662219, lng:102.1303111,
+    openMin:7*60, closeMin:18*60,
+    hours:"07:00 – 18:00 (ຄາດການ)",
+    rating:4.2, ratingCount:23,
+    addr:"ຖ.13 ໃຕ້",
+    tags:["ລັດວິສາຫະກິດ"],
+    note:"ລັດວິສາຫະກິດ · ເປີດໃໝ່ 2026",
+    closedSun:false
+  },
+  {
+    id:9, name:"Donkhoun (LSFC) Gas Station",
+    icon:"🏛", brand:"LSFC",
+    lat:19.847305, lng:102.1425657,
+    openMin:7*60, closeMin:18*60,
+    hours:"07:00 – 18:00 (ຄາດການ)",
+    rating:4.3, ratingCount:14,
+    addr:"ດອນຄູນ ຫຼວງພະບາງ",
+    tags:["ລັດວິສາຫະກິດ","ຝັ່ງໃຕ້ໄກ"],
+    note:"ສາຂາດອນຄູນ · LSFC",
+    closedSun:false
+  },
+  {
+    id:10, name:"ສາຍຊຸມຊົນ",
+    icon:"🟤", brand:"ທ້ອງຖິ່ນ",
+    lat:19.899475, lng:102.156082,
+    openMin:6*60, closeMin:20*60,
+    hours:"ບໍ່ທາບ (ຄາດ 06:00 – 20:00)",
+    rating:4.0, ratingCount:1,
+    addr:"ກາງຫຼວງພະບາງ",
+    tags:["ຂໍ້ມູນໜ້ອຍ"],
+    note:"ຂໍ້ມູນເວລາບໍ່ຄົບ — ຄວນໂທຖາມກ່ອນ",
+    closedSun:false
+  }
+];
+
+let curFilter = 'all';
+let curTab = 'map';
+let map, markers=[];
+
+function getLaoTime(){
+  const now=new Date();
+  return new Date(now.getTime()+(7*60+now.getTimezoneOffset())*60000);
+}
+function pad(n){return n<10?'0'+n:String(n)}
+function isOpen(s){
+  const t=getLaoTime();
+  const m=t.getHours()*60+t.getMinutes();
+  const dow=t.getDay(); // 0=Sun
+  if(s.closedSun && dow===0) return false;
+  return m>=s.openMin && m<s.closeMin;
+}
+function stars(r){
+  const f=Math.round(r);
+  return '★'.repeat(f)+'☆'.repeat(5-f);
+}
+function filtered(){
+  if(curFilter==='open')   return STATIONS.filter(isOpen);
+  if(curFilter==='closed') return STATIONS.filter(s=>!isOpen(s));
+  return STATIONS;
+}
+
+function updateClock(){
+  const t=getLaoTime();
+  document.getElementById('clock').textContent=pad(t.getHours())+':'+pad(t.getMinutes())+' ລາວ';
+}
+function updateStats(){
+  const o=STATIONS.filter(isOpen).length;
+  document.getElementById('s-open').textContent=o;
+  document.getElementById('s-closed').textContent=STATIONS.length-o;
+  document.getElementById('s-total').textContent=STATIONS.length;
+}
+
+function setFilter(f){
+  curFilter=f;
+  ['all','open','closed'].forEach(k=>{
+    const b=document.getElementById('f-'+k);
+    b.className='fbtn';
+    if(k===f) b.classList.add(k==='all'?'fa':k==='open'?'fo':'fc');
+  });
+  if(curTab==='list') renderList();
+  if(curTab==='map')  renderMap();
+}
+
+function switchTab(t){
+  curTab=t;
+  document.getElementById('tab-map').classList.toggle('active',t==='map');
+  document.getElementById('tab-list').classList.toggle('active',t==='list');
+  document.getElementById('map-view').style.display=t==='map'?'flex':'none';
+  document.getElementById('list-view').style.display=t==='list'?'flex':'none';
+  if(t==='map'){
+    setTimeout(()=>{map&&map.invalidateSize();},50);
+    renderMap();
+  }else{
+    renderList();
+  }
+}
+
+/* ---- MAP ---- */
+function initMap(){
+  map=L.map('map',{zoomControl:true}).setView([19.889,102.147],13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© OpenStreetMap',maxZoom:19
+  }).addTo(map);
+  renderMap();
+}
+
+function makeIcon(open,icon){
+  const bg=open?'#1A7A3C':'#B53030';
+  const border=open?'#0F5C2C':'#8A2020';
+  const html=`<div style="
+    width:36px;height:36px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+    background:${bg};border:2px solid ${border};
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.25);
+  "><span style="transform:rotate(45deg);font-size:16px;line-height:1">${icon}</span></div>`;
+  return L.divIcon({html,className:'',iconSize:[36,36],iconAnchor:[18,36],popupAnchor:[0,-36]});
+}
+
+function renderMap(){
+  if(!map) return;
+  markers.forEach(m=>map.removeLayer(m));
+  markers=[];
+  const list=filtered();
+  list.forEach(s=>{
+    const open=isOpen(s);
+    const m=L.marker([s.lat,s.lng],{icon:makeIcon(open,s.icon)}).addTo(map);
+    const popup=`<div class="lpopup">
+      <div class="lpopup-name">${s.name}</div>
+      <div class="lpopup-addr">${s.addr}</div>
+      <span class="lpopup-status ${open?'o':'c'}">${open?'✓ ເປີດຢູ່':'✕ ປິດແລ້ວ'}</span>
+      <div class="lpopup-hours">⏰ ${s.hours}</div>
+      <div class="lpopup-hours">⭐ ${s.rating} (${s.ratingCount} reviews)</div>
+      <a class="lpopup-link" href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}" target="_blank">📍 ເປີດໃນ Google Maps ↗</a>
+    </div>`;
+    m.bindPopup(popup,{maxWidth:240});
+    markers.push(m);
+  });
+}
+
+/* ---- LIST ---- */
+function renderList(){
+  const el=document.getElementById('list-view');
+  const list=filtered();
+  if(!list.length){
+    el.innerHTML='<div class="empty-msg">ບໍ່ມີປ້ຳໃນລາຍການທີ່ເລືອກ</div>';
+    return;
+  }
+  el.innerHTML=list.map(s=>{
+    const open=isOpen(s);
+    const gmaps=`https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}`;
+    const tagHtml=s.tags.map(t=>`<span class="c-tag">${t}</span>`).join('');
+    return `<div class="card ${open?'open':'closed'}">
+      <div class="card-head">
+        <div class="c-icon ${open?'o':'c'}">${s.icon}</div>
+        <div class="c-info">
+          <div class="c-name">${s.name}</div>
+          <div class="c-addr">📍 ${s.addr}</div>
+        </div>
+        <span class="c-pill ${open?'o':'c'}">${open?'ເປີດ':'ປິດ'}</span>
+      </div>
+      <div class="c-body">
+        <span class="c-tag"><span>⏰</span>${s.hours}</span>
+        ${tagHtml}
+      </div>
+      <div class="c-note">${s.note}</div>
+      <div class="c-foot">
+        <span class="stars">${stars(s.rating)}</span>
+        <span class="rating-txt">${s.rating} (${s.ratingCount})</span>
+        <a class="map-btn" href="${gmaps}" target="_blank">ເບິ່ງໃນແຜນທີ່ ↗</a>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ---- INIT ---- */
+updateClock(); updateStats(); initMap();
+setInterval(()=>{updateClock();updateStats();renderMap();if(curTab==='list')renderList();},30000);
+</script>
+</body>
+  </html>
